@@ -1,5 +1,8 @@
 import random
+import matplotlib.pyplot as plt
+import time
 
+inicio = time.time()
 # Matriz de custos (empresas x projetos)
 matrix_valores = [
     [12, 18, 15, 22, 9, 14, 20, 11, 17],
@@ -53,6 +56,7 @@ def hill_climbing():
     random.shuffle(solucao_atual)
     # Chama a função de calcular custo
     custo_atual = calcular_custo(solucao_atual)
+    custos = [custo_atual]
 
     while True:
         # Vai buscar os melhores vizinhos a partir da aleatória
@@ -66,8 +70,9 @@ def hill_climbing():
             vizinhos_melhores, key=lambda x: x[1])  # Seleciona o melhor vizinho entre todos encontrados.
         solucao_atual = melhor_vizinho  # Poe o melhor vizinho como a melhor solução
         custo_atual = melhor_custo  # Poe o melhor custo da seleção escolhida
+        custos.append(custo_atual)  # Adiciona o custo atual na lista de custos
 
-    return solucao_atual, custo_atual
+    return solucao_atual, custo_atual, custos
 
 
 # Aqui basicamente chamamos o hill_climbing n vezes e dentre todas retornando a com menor custo. Buscamos o menor global assim.
@@ -75,18 +80,24 @@ def multi_start_hill_climbing(n):
     melhor_solucao = None
     # Valor infinito garante qualquer valor já seja o melhor. Poderia ser algo como 100000, mas por boas práticas é melhor por dessa forma.
     melhor_custo = float('inf')
+    melhor_custos = []  # Para armazenar os custos do melhor Hill Climbing
+    todas_execucoes = []
+
     for _ in range(n):  # Execução do hill climbing
-        solucao, custo = hill_climbing()
+        solucao, custo, custos = hill_climbing()
+        # Adiciona os custos de cada execução na lista de execuções
+        todas_execucoes.append(custos)
         # quando o custo de uma for menor que a atual, os valores mudam e ela passa a ser o menor local.
         if custo < melhor_custo:
             melhor_solucao = solucao
             melhor_custo = custo
+            melhor_custos = custos  # Atualiza os custos do melhor Hill Climbing
     # Vai retornar o menor custo de todos da iteração, e junto a lista da solução. Aqui a chance de ser o mínimo global é alta.
-    return melhor_solucao, melhor_custo
+    return melhor_solucao, melhor_custo, melhor_custos, todas_execucoes
 
 
 # Executa o Multi-start, podemos mudar as iterações aqui.
-solucao, custo = multi_start_hill_climbing(100)
+solucao, custo, melhor_custos, todas_execucoes = multi_start_hill_climbing(120)
 
 # Exibe resultado da melhor e seu custo
 print("Melhor solução (projeto por empresa):", solucao)
@@ -103,3 +114,21 @@ for empresa, projeto in enumerate(solucao):
 
 for linha in matriz_binaria:  # Print da matriz binária
     print(' '.join(str(valor) for valor in linha))
+
+# Tempo de execução
+fim = time.time()
+print(f"Tempo total de execução: {fim - inicio:.2f} segundos")
+
+# Plotando todas as execuções
+plt.figure(figsize=(15, 7.5))
+for i, execucao in enumerate(todas_execucoes):
+    plt.plot(execucao, alpha=0.4)
+# Destaca a melhor em vermelho
+plt.plot(melhor_custos, color='red', linewidth=2.5, label='Melhor execução')
+plt.title('Evolução dos custos em todas as execuções do Hill Climbing')
+plt.xlabel('Iterações')
+plt.ylabel('Custo')
+plt.legend()
+plt.grid(True)
+plt.tight_layout()
+plt.show()
